@@ -4,21 +4,36 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 )
 
-// types
+// ServiceLog stores one captured log message and timestamp.
 type ServiceLog struct {
 	ts  time.Time
 	msg string
 }
 
+// ServiceLogger tracks service-tagged log messages in memory.
 type ServiceLogger struct {
+	mu   sync.RWMutex
 	logs map[string]*ServiceLog
 }
 
 var logger *ServiceLogger = &ServiceLogger{
 	logs: make(map[string]*ServiceLog),
+}
+
+func (l *ServiceLogger) set(name string, log *ServiceLog) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.logs[name] = log
+}
+
+func (l *ServiceLogger) reset() {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.logs = make(map[string]*ServiceLog)
 }
 
 const (
@@ -76,8 +91,7 @@ const (
 	BgBrightWhite   = "\033[107m"
 )
 
-// checks if the log message contains any of the specified filters
-// returns true if it does, false otherwise
+// LogFilter reports whether format contains at least one filter string.
 func LogFilter(format string, filters ...string) bool {
 	for _, filter := range filters {
 		if strings.Contains(format, filter) {
@@ -87,7 +101,7 @@ func LogFilter(format string, filters ...string) bool {
 	return false
 }
 
-// trims the path to a maximum length, prefixing with "..." if it exceeds the limit
+// FormatPath trims path to maxLength, prefixing with "..." when trimmed.
 func FormatPath(path string, maxLength int) string {
 	const ellipsis = "..."
 	if len(path) <= maxLength {
@@ -102,23 +116,27 @@ func FormatPath(path string, maxLength int) string {
 	return ellipsis + path[trimStart:]
 }
 
-// trims the file path to start from "dps_http/"
+// TrimToProjectRoot trims path at root and enforces a max length of 32.
 func TrimToProjectRoot(root, path string) string {
+	return TrimToProjectRootWidth(root, path, 32)
+}
+
+// TrimToProjectRootWidth trims the file path to start from root and maxLength.
+func TrimToProjectRootWidth(root, path string, maxLength int) string {
 	root = root + "/"
 	idx := strings.Index(path, root)
 	if idx == -1 {
-		return path // fallback to full path if not found
+		return FormatPath(path, maxLength)
 	}
-	return FormatPath(path[idx:], 32)
+	return FormatPath(path[idx:], maxLength)
 }
 
-// strips ANSI escape codes from a string
-// useful for cleaning colors from logs
+// StripANSI removes ANSI escape codes from s.
 func StripANSI(s string) string {
 	return regexp.MustCompile(`\x1b\[[0-9;]*m`).ReplaceAllString(s, "")
 }
 
-// centers the tag within a given width, padding with spaces
+// CenterTag centers tag to width using spaces.
 func CenterTag(tag string, width int) string {
 	visible := StripANSI(tag)
 	tagLen := len(visible)
@@ -130,18 +148,20 @@ func CenterTag(tag string, width int) string {
 	left := padding / 2
 	right := padding - left
 
-	return strings.Repeat("", left) + tag + strings.Repeat(" ", right)
+	return strings.Repeat(" ", left) + tag + strings.Repeat(" ", right)
 }
 
+// ColorText wraps text in an ANSI color and reset sequence.
 func ColorText(color, text string) string {
 	return fmt.Sprintf("%s%s%s", color, text, StyleReset)
 }
 
-// 256-color helpers (use values 0-255)
+// StyleColor256 returns a foreground ANSI 256-color escape code.
 func StyleColor256(n int) string {
 	return fmt.Sprintf("\033[38;5;%dm", n)
 }
 
+// BgColor256 returns a background ANSI 256-color escape code.
 func BgColor256(n int) string {
 	return fmt.Sprintf("\033[48;5;%dm", n)
 }

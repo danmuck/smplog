@@ -1,0 +1,12 @@
+# Logger runtime configuration
+mode = "warn"
+trace = false
+enable_timestamp = true
+project_root = "my_project"
+path_width = 48
+
+[services]
+api = "api"
+users = "users"
+metrics = "metrics"
+auth = "auth"

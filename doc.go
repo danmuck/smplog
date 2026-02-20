@@ -1,14 +1,22 @@
-// Package logs provides a thin zerolog wrapper with optional colorized
-// console output and a bypass mode for direct zerolog performance behavior.
+// Package logs provides a thin zerolog wrapper with:
+//   - Structured JSON output in bypass mode (Config.Bypass = true).
+//   - Human-readable, colorized console output in wrapper mode (default).
+//   - A package-global singleton logger configured via Configure and Config.
 //
-// The package intentionally limits itself to logger configuration and simple
-// helpers; transport and sink concerns should be handled by the configured
-// io.Writer.
+// Quick start:
 //
-// Relevant docs (project integration):
-// - docs/architecture/definitions/observability.toml
+//	logs.Info("server started")
+//	logs.Error(err, "handler failed")
 //
-// - docs/glossary/observability.md
+// For production JSON output:
 //
-// - docs/progress/index.md
+//	logs.Configure(logs.Config{Bypass: true, Level: logs.InfoLevel})
+//
+// To inject permanent context fields:
+//
+//	logs.Configure(logs.Config{
+//	    ConfigureLogger: func(l logs.Logger) logs.Logger {
+//	        return l.With().Str("service", "api").Logger()
+//	    },
+//	})
 package logs

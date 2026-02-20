@@ -1,0 +1,88 @@
+# smplog configuration file
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# USAGE
+#   cfg, err := logs.ConfigFromFile("logger.toml")
+#   if err != nil { log.Fatal(err) }
+#   logs.Configure(cfg)
+#
+# Fields not present in this file are filled with package defaults:
+#   level       = "info"
+#   timestamp   = false
+#   time_format = "2006-01-02T15:04:05Z07:00"  (RFC 3339)
+#   no_color    = false
+#   bypass      = false
+#   [colors]    = DefaultColors()
+#
+# Fields that require code and cannot be expressed here:
+#   Writer           io.Writer            — defaults to os.Stdout
+#   ConfigureZerolog func()               — set process-wide zerolog options
+#   ConfigureConsole func(*ConsoleWriter) — override ConsoleWriter formatters
+#   ConfigureLogger  func(Logger) Logger  — inject permanent context fields
+#
+# Set these on the returned Config before calling Configure:
+#   cfg.Writer = myWriter
+#   cfg.ConfigureLogger = func(l logs.Logger) logs.Logger {
+#       return l.With().Str("service", "my-service").Logger()
+#   }
+#   logs.Configure(cfg)
+#
+# ─────────────────────────────────────────────────────────────────────────────
+
+# level — minimum log level emitted by the package-global logger.
+# Valid values: "trace" | "debug" | "info" | "warn" | "error" | "fatal"
+# Does not set the zerolog global level; use SetGlobalLevel in code for that.
+level = "info"
+
+# timestamp — append a timestamp field to every log entry.
+timestamp = true
+
+# caller — append a caller field (file:line) to every log entry.
+caller = false
+
+# stack — append a stack trace field when Stack() is used on an event.
+stack = false
+
+# time_format — Go time layout string for timestamp rendering in console mode.
+# Reference time: Mon Jan 2 15:04:05 MST 2006
+# Common values:
+#   "2006-01-02T15:04:05Z07:00"  RFC 3339 (default)
+#   "15:04:05"                   time only
+#   "2006-01-02 15:04:05"        human-readable without timezone
+# Note: for JSON/bypass mode set zerolog.TimeFieldFormat via SetTimeFieldFormat
+# in a ConfigureZerolog hook.
+time_format = "2006-01-02T15:04:05Z07:00"
+
+# no_color — disable all ANSI colors in console mode.
+no_color = false
+
+# bypass — emit raw zerolog JSON instead of colorized console output.
+# Use this in production so log collectors receive structured JSON.
+bypass = false
+
+# ─────────────────────────────────────────────────────────────────────────────
+# [colors] — ANSI 256-color palette index (0–255) for each console token.
+#
+# Omit a field to inherit the color associated with the current log level.
+# These are the same palette indexes accepted by StyleColor256(n) in code.
+#
+# Common indexes:
+#   0  Black        1  Red          2  Green        3  Yellow
+#   4  Blue         5  Magenta      6  Cyan          7  White
+#   8  BrightBlack  9  BrightRed   10  BrightGreen  11  BrightYellow
+#  12  BrightBlue  13  BrightMagenta 14 BrightCyan  15  BrightWhite
+#  16–231  color cube   232–255  grayscale
+# ─────────────────────────────────────────────────────────────────────────────
+[colors]
+trace       = 8    # BrightBlack
+debug       = 2    # Green
+info        = 4    # Blue
+warn        = 3    # Yellow
+error       = 1    # Red
+fatal       = 196  # bright red (extended palette)
+panic       = 5    # Magenta
+# message — omit to inherit the level color
+# message   = 7
+timestamp   = 8    # BrightBlack
+field_name  = 6    # Cyan
+field_value = 7    # White

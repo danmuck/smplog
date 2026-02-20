@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -12,59 +11,41 @@ import (
 	"github.com/rs/zerolog"
 )
 
-const (
-	// INACTIVE disables all legacy helper output.
-	INACTIVE = iota
-	// ERROR enables only error-level helpers.
-	ERROR
-	// INFO enables info-level helpers.
-	INFO
-	// WARN enables warning-level helpers.
-	WARN
-	// DEBUG enables debug-level helpers.
-	DEBUG
-	// DIAGNOSTICS enables trace and debug helper output.
-	DIAGNOSTICS
-)
-
-var (
-	// MODE keeps compatibility with the previous threshold API.
-	MODE = DIAGNOSTICS
-	// TRACE enables file:line prefix in String/Print helpers.
-	TRACE = true
-	// LOGGER_enable_timestamp enables timestamp prefix in String/Print helpers.
-	LOGGER_enable_timestamp = true
-)
-
 // Config controls smplog and zerolog behavior.
 type Config struct {
 	// Writer is the final output destination.
 	Writer io.Writer
-	// Level is the logger and global threshold.
+	// Level is the per-logger threshold. Does not affect the zerolog global level;
+	// call SetGlobalLevel explicitly if a process-wide ceiling is needed.
 	Level Level
-	// Timestamp appends timestamp field to log context.
+	// Timestamp appends a timestamp field to every log entry.
 	Timestamp bool
-	// Caller appends caller field to log context.
+	// Caller appends a caller field to every log entry.
 	Caller bool
 	// Stack appends stack traces when Stack() is used on events.
 	Stack bool
-	// TimeFormat controls zerolog timestamp formatting.
+	// TimeFormat controls timestamp rendering in console mode.
+	// For bypass/JSON mode set zerolog.TimeFieldFormat via SetTimeFieldFormat.
 	TimeFormat string
-	// NoColor disables console colors in wrapper mode.
+	// NoColor disables ANSI color output in console mode.
 	NoColor bool
-	// Bypass disables all console wrapping and emits plain zerolog output.
+	// Bypass disables the console wrapper and emits raw zerolog JSON.
 	Bypass bool
-	// Colors controls text colors in console mode.
+	// Colors controls per-level ANSI colors in console mode.
 	Colors ConsoleColors
-	// ConfigureZerolog allows global zerolog customization before logger setup.
+	// ConfigureZerolog is called before the logger is built.
+	// Use it to set process-wide zerolog options (e.g. SetTimeFieldFormat).
 	ConfigureZerolog func()
-	// ConfigureConsole allows direct edits to the console writer.
+	// ConfigureConsole is called after the ConsoleWriter is created.
+	// Use it to override individual formatter functions.
 	ConfigureConsole func(w *ConsoleWriter)
-	// ConfigureLogger allows final logger customization before install.
+	// ConfigureLogger is called after the logger is built.
+	// Use it to inject permanent context fields (e.g. service name).
 	ConfigureLogger func(l Logger) Logger
 }
 
 var (
+	// stateMu guards currentConfig and currentLogger.
 	stateMu       sync.RWMutex
 	currentConfig Config
 	currentLogger *Logger
@@ -74,11 +55,11 @@ func init() {
 	Configure(DefaultConfig())
 }
 
-// DefaultConfig returns a sensible console-focused default config.
+// DefaultConfig returns a console-mode config suitable for local development.
 func DefaultConfig() Config {
 	return Config{
 		Writer:     os.Stdout,
-		Level:      modeToLevel(MODE),
+		Level:      InfoLevel,
 		Timestamp:  true,
 		TimeFormat: time.RFC3339,
 		NoColor:    false,
@@ -87,7 +68,7 @@ func DefaultConfig() Config {
 	}
 }
 
-// Configure applies config and replaces the package-global logger.
+// Configure applies cfg and atomically replaces the package-global logger.
 func Configure(cfg Config) {
 	stateMu.Lock()
 	defer stateMu.Unlock()
@@ -96,41 +77,35 @@ func Configure(cfg Config) {
 	currentLogger = &logger
 }
 
-// Configured returns the currently installed logger config.
+// Configured returns a snapshot of the currently active config.
 func Configured() Config {
 	stateMu.RLock()
 	defer stateMu.RUnlock()
 	return currentConfig
 }
 
-// SetBypass toggles wrapper bypass mode.
+// SetBypass toggles bypass (JSON) mode without rebuilding the full config.
 func SetBypass(enabled bool) {
 	cfg := Configured()
 	cfg.Bypass = enabled
 	Configure(cfg)
 }
 
-// SetColors updates console colors.
+// SetColors replaces the console color palette.
 func SetColors(colors ConsoleColors) {
 	cfg := Configured()
 	cfg.Colors = colors
 	Configure(cfg)
 }
 
-// SetMode updates MODE and maps it into zerolog level.
-func SetMode(mode int) {
-	MODE = mode
-	SetLevel(modeToLevel(mode))
-}
-
-// SetLevel updates logger and global zerolog level.
+// SetLevel updates the per-logger level threshold.
 func SetLevel(level Level) {
 	cfg := Configured()
 	cfg.Level = level
 	Configure(cfg)
 }
 
-// SetLogger replaces the package-global logger directly.
+// SetLogger replaces the package-global logger directly, bypassing Configure.
 func SetLogger(l Logger) {
 	stateMu.Lock()
 	defer stateMu.Unlock()
@@ -144,7 +119,7 @@ func Zerolog() *Logger {
 	return currentLogger
 }
 
-// With returns a context builder from the active logger.
+// With returns a context builder on the active logger for adding permanent fields.
 func With() Context {
 	return Zerolog().With()
 }
@@ -154,6 +129,7 @@ func AtLevel(level Level) *Event {
 	return Zerolog().WithLevel(zerolog.Level(level))
 }
 
+// normalizeConfig replaces zero-value fields with defaults.
 func normalizeConfig(cfg Config) Config {
 	if cfg.Writer == nil {
 		cfg.Writer = os.Stdout
@@ -167,13 +143,14 @@ func normalizeConfig(cfg Config) Config {
 	return cfg
 }
 
+// buildLogger constructs a zerolog logger from cfg.
+// It does not mutate any zerolog package-level globals; all configuration is
+// scoped to the returned logger instance. To set process-wide zerolog options
+// use cfg.ConfigureZerolog.
 func buildLogger(cfg Config) Logger {
 	if cfg.ConfigureZerolog != nil {
 		cfg.ConfigureZerolog()
 	}
-
-	zerolog.TimeFieldFormat = cfg.TimeFormat
-	zerolog.SetGlobalLevel(cfg.Level)
 
 	writer := cfg.Writer
 	if !cfg.Bypass {
@@ -209,6 +186,7 @@ func buildLogger(cfg Config) Logger {
 	return logger
 }
 
+// applyConsoleFormatting wires ANSI color transforms onto the ConsoleWriter.
 func applyConsoleFormatting(console *ConsoleWriter, cfg Config) {
 	console.FormatPrepare = func(evt map[string]any) error {
 		level := strings.ToLower(fmt.Sprint(evt[zerolog.LevelFieldName]))
@@ -220,19 +198,18 @@ func applyConsoleFormatting(console *ConsoleWriter, cfg Config) {
 			)
 		}
 		if raw, ok := evt[zerolog.MessageFieldName]; ok {
-			messageColor := cfg.Colors.Message
-			if messageColor == "" {
-				messageColor = cfg.Colors.level(level)
+			msgColor := cfg.Colors.Message
+			if msgColor == "" {
+				msgColor = cfg.Colors.level(level)
 			}
 			evt[zerolog.MessageFieldName] = colorize(
-				messageColor,
+				msgColor,
 				fmt.Sprint(raw),
 				cfg.NoColor,
 			)
 		}
 		return nil
 	}
-
 	console.FormatTimestamp = func(i any) string {
 		if i == nil {
 			return ""
@@ -252,164 +229,42 @@ func applyConsoleFormatting(console *ConsoleWriter, cfg Config) {
 	console.FormatErrFieldValue = console.FormatFieldValue
 }
 
-func modeToLevel(mode int) Level {
-	switch mode {
-	case INACTIVE:
-		return Disabled
-	case ERROR:
-		return ErrorLevel
-	case INFO:
-		return InfoLevel
-	case WARN:
-		return WarnLevel
-	case DEBUG:
-		return DebugLevel
-	case DIAGNOSTICS:
-		return TraceLevel
-	default:
-		return WarnLevel
-	}
-}
+// Trace logs a message at trace level.
+func Trace(msg string) { Zerolog().Trace().Msg(msg) }
 
-// ColorTest prints one message per level using current configuration.
-func ColorTest() {
-	AtLevel(TraceLevel).Msg("trace")
-	AtLevel(DebugLevel).Msg("debug")
-	AtLevel(InfoLevel).Msg("info")
-	AtLevel(WarnLevel).Msg("warn")
-	AtLevel(ErrorLevel).Msg("error")
-}
-
-// Log logs a message at info level.
-func Log(msg string) {
-	Zerolog().Info().Msg(msg)
-}
-
-// Logf logs a formatted message at info level.
-func Logf(format string, v ...any) {
-	Zerolog().Info().Msgf(format, v...)
-}
-
-// Fatal logs a message at fatal level and exits.
-func Fatal(msg string) {
-	Zerolog().Fatal().Msg(msg)
-}
-
-// Fatalf logs a formatted fatal message and exits.
-func Fatalf(format string, v ...any) {
-	Zerolog().Fatal().Msgf(format, v...)
-}
-
-// Err logs a message at error level.
-func Err(msg string) {
-	Zerolog().Error().Msg(msg)
-}
-
-// Errf logs a formatted message at error level.
-func Errf(format string, v ...any) {
-	Zerolog().Error().Msgf(format, v...)
-}
-
-// Warn logs a message at warn level.
-func Warn(msg string) {
-	Zerolog().Warn().Msg(msg)
-}
-
-// Warnf logs a formatted message at warn level.
-func Warnf(format string, v ...any) {
-	Zerolog().Warn().Msgf(format, v...)
-}
-
-// Info logs a message at info level.
-func Info(msg string) {
-	Zerolog().Info().Msg(msg)
-}
-
-// Infof logs a formatted message at info level.
-func Infof(format string, v ...any) {
-	Zerolog().Info().Msgf(format, v...)
-}
+// Tracef logs a formatted message at trace level.
+func Tracef(format string, v ...any) { Zerolog().Trace().Msgf(format, v...) }
 
 // Debug logs a message at debug level.
-func Debug(msg string) {
-	Zerolog().Debug().Msg(msg)
-}
+func Debug(msg string) { Zerolog().Debug().Msg(msg) }
 
 // Debugf logs a formatted message at debug level.
-func Debugf(format string, v ...any) {
-	Zerolog().Debug().Msgf(format, v...)
-}
+func Debugf(format string, v ...any) { Zerolog().Debug().Msgf(format, v...) }
 
-// Dev logs a message at debug level for legacy compatibility.
-func Dev(msg string) {
-	Zerolog().Debug().Msg(msg)
-}
+// Info logs a message at info level.
+func Info(msg string) { Zerolog().Info().Msg(msg) }
 
-// Devf logs a formatted message at debug level for legacy compatibility.
-func Devf(format string, v ...any) {
-	Zerolog().Debug().Msgf(format, v...)
-}
+// Infof logs a formatted message at info level.
+func Infof(format string, v ...any) { Zerolog().Info().Msgf(format, v...) }
 
-// Init logs a message at trace level for legacy compatibility.
-func Init(msg string) {
-	Zerolog().Trace().Msg(msg)
-}
+// Warn logs a message at warn level.
+func Warn(msg string) { Zerolog().Warn().Msg(msg) }
 
-// Initf logs a formatted message at trace level.
-func Initf(format string, v ...any) {
-	Zerolog().Trace().Msgf(format, v...)
-}
+// Warnf logs a formatted message at warn level.
+func Warnf(format string, v ...any) { Zerolog().Warn().Msgf(format, v...) }
 
-// MsgSuccess logs an informational success message.
-func MsgSuccess(msg string) {
-	Print(StyleColor256(66), "[MDS]", "%s", msg)
-}
+// Error logs a message at error level with a structured error field.
+// If err is nil zerolog omits the error field.
+func Error(err error, msg string) { Zerolog().Error().Err(err).Msg(msg) }
 
-// MsgSuccessf logs a formatted informational success message.
-func MsgSuccessf(format string, v ...any) {
-	MsgSuccess(fmt.Sprintf(format, v...))
-}
+// Errorf logs a formatted message at error level with a structured error field.
+// If err is nil zerolog omits the error field.
+func Errorf(err error, format string, v ...any) { Zerolog().Error().Err(err).Msgf(format, v...) }
 
-// MsgFailure logs an informational failure message.
-func MsgFailure(msg string) {
-	Print(StyleColor256(130), "[MDF]", "%s", msg)
-}
+// Fatal logs a message at fatal level with a structured error field, then exits.
+// If err is nil zerolog omits the error field.
+func Fatal(err error, msg string) { Zerolog().Fatal().Err(err).Msg(msg) }
 
-// MsgFailuref logs a formatted informational failure message.
-func MsgFailuref(format string, v ...any) {
-	MsgFailure(fmt.Sprintf(format, v...))
-}
-
-// Print logs a formatted message with optional tag and ANSI color.
-func Print(color, tag, format string, v ...any) {
-	msg := String(color, tag, format, v...)
-	if !Configured().Bypass {
-		msg = ColorText(color, msg)
-	}
-	Zerolog().Info().Msg(msg)
-}
-
-// String formats a message with legacy TRACE and timestamp prefixes.
-func String(_color, tag, format string, v ...any) string {
-	msg := fmt.Sprintf(format, v...)
-	if tag != "" {
-		msg = fmt.Sprintf("%s %s", tag, msg)
-	}
-	if !TRACE {
-		if LOGGER_enable_timestamp {
-			return fmt.Sprintf("%s %s", time.Now().Format(time.Stamp), msg)
-		}
-		return msg
-	}
-
-	_, file, line, ok := runtime.Caller(2)
-	if !ok {
-		return msg
-	}
-
-	path := FormatPath(file, 32)
-	if LOGGER_enable_timestamp {
-		return fmt.Sprintf("%s [%s:%d] %s", time.Now().Format(time.Stamp), path, line, msg)
-	}
-	return fmt.Sprintf("[%s:%d] %s", path, line, msg)
-}
+// Fatalf logs a formatted message at fatal level with a structured error field, then exits.
+// If err is nil zerolog omits the error field.
+func Fatalf(err error, format string, v ...any) { Zerolog().Fatal().Err(err).Msgf(format, v...) }

@@ -20,6 +20,7 @@ type fileConfig struct {
 	NoColor    bool        `toml:"no_color"`
 	Bypass     bool        `toml:"bypass"`
 	Colors     colorConfig `toml:"colors"`
+	Files      []LogFile   `toml:"files"`
 }
 
 // colorConfig is the [colors] section of the TOML file.
@@ -95,6 +96,7 @@ func ConfigFromFile(path string) (Config, error) {
 		TimeFormat: fc.TimeFormat,
 		NoColor:    fc.NoColor,
 		Bypass:     fc.Bypass,
+		Files:      fc.Files,
 		Colors: ConsoleColors{
 			Trace:      color256(fc.Colors.Trace),
 			Debug:      color256(fc.Colors.Debug),

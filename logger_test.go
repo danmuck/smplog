@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -138,6 +140,51 @@ func TestErrorAttachesStructuredErrorField(t *testing.T) {
 	if !strings.Contains(logLine, `"message":"database unavailable"`) {
 		t.Fatalf("expected message field in output: %q", logLine)
 	}
+}
+
+// TestWriteFileRoutesToNamedFile verifies WriteFile writes JSON to the correct named file.
+func TestWriteFileRoutesToNamedFile(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "test.log")
+
+	originalCfg := Configured()
+	t.Cleanup(func() {
+		Close()
+		Configure(originalCfg)
+	})
+
+	Configure(Config{
+		Files: []LogFile{{Name: "test", Path: path}},
+	})
+
+	WriteFile(At(InfoLevel, "hello-file"), "test")
+	WriteFile(Atf(ErrorLevel, "code %d", 42), "test")
+
+	if err := Close(); err != nil {
+		t.Fatalf("close: %v", err)
+	}
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read log file: %v", err)
+	}
+	lines := strings.Split(strings.TrimSpace(string(data)), "\n")
+	if len(lines) != 2 {
+		t.Fatalf("expected 2 log lines, got %d: %q", len(lines), string(data))
+	}
+	if !json.Valid([]byte(lines[0])) {
+		t.Errorf("line 0 not valid JSON: %q", lines[0])
+	}
+	if !strings.Contains(lines[0], `"message":"hello-file"`) {
+		t.Errorf("expected hello-file in line 0: %q", lines[0])
+	}
+	if !strings.Contains(lines[1], `"message":"code 42"`) {
+		t.Errorf("expected code 42 in line 1: %q", lines[1])
+	}
+}
+
+// TestWriteFileUnknownNameIsNoop verifies WriteFile with an unknown name does nothing.
+func TestWriteFileUnknownNameIsNoop(t *testing.T) {
+	WriteFile(At(InfoLevel, "should not panic"), "nonexistent")
 }
 
 // TestErrorWithNilErrOmitsErrorField verifies Error with nil err produces no "error" key.

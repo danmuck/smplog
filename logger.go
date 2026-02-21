@@ -1,6 +1,7 @@
 package logs
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -33,6 +34,9 @@ type Config struct {
 	Bypass bool
 	// Colors controls per-level ANSI colors in console mode.
 	Colors ConsoleColors
+	// Files lists named log file destinations available to WriteFile.
+	// Each entry is opened for append/create when Configure is called.
+	Files []LogFile
 	// ConfigureZerolog is called before the logger is built.
 	// Use it to set process-wide zerolog options (e.g. SetTimeFieldFormat).
 	ConfigureZerolog func()
@@ -44,15 +48,77 @@ type Config struct {
 	ConfigureLogger func(l Logger) Logger
 }
 
+// LogFile is a named log file destination used by WriteFile.
+// Files are opened for append/create on Configure and closed on Close.
+type LogFile struct {
+	Name string `toml:"name"`
+	Path string `toml:"path"`
+}
+
+// LogFunc is a deferred log write parameterized over a Logger.
+// Construct one with At or Atf, then route it to a named file with WriteFile.
+//
+//	logs.WriteFile(logs.At(logs.DebugLevel, "started"), "dev")
+//	logs.WriteFile(logs.Atf(logs.ErrorLevel, "exit code %d", code), "errors")
+type LogFunc func(*Logger)
+
+// At returns a LogFunc that writes msg at level.
+func At(level Level, msg string) LogFunc {
+	return func(l *Logger) { l.WithLevel(level).Msg(msg) }
+}
+
+// Atf returns a LogFunc that writes a formatted message at level.
+func Atf(level Level, format string, v ...any) LogFunc {
+	return func(l *Logger) { l.WithLevel(level).Msgf(format, v...) }
+}
+
+// WriteFile routes fn to the named log file configured in Config.Files.
+// If name is not a configured file the call is a no-op.
+// File entries are written as JSON with a timestamp field.
+func WriteFile(fn LogFunc, name string) {
+	filesMu.RLock()
+	f, ok := openFiles[name]
+	filesMu.RUnlock()
+	if !ok {
+		return
+	}
+	logger := zerolog.New(f).With().Timestamp().Logger()
+	fn(&logger)
+}
+
+// Close closes all open log files. Call once on application shutdown.
+func Close() error {
+	filesMu.Lock()
+	defer filesMu.Unlock()
+	var errs []error
+	for name, f := range openFiles {
+		if err := f.Close(); err != nil {
+			errs = append(errs, fmt.Errorf("close %q: %w", name, err))
+		}
+		delete(openFiles, name)
+	}
+	return errors.Join(errs...)
+}
+
 var (
 	// stateMu guards currentConfig and currentLogger.
 	stateMu       sync.RWMutex
 	currentConfig Config
 	currentLogger *Logger
+
+	// filesMu guards openFiles.
+	filesMu   sync.RWMutex
+	openFiles = make(map[string]*os.File)
 )
 
+const defaultConfigFile = "smplog.config.toml"
+
 func init() {
-	Configure(DefaultConfig())
+	cfg, err := ConfigFromFile(defaultConfigFile)
+	if err != nil {
+		cfg = DefaultConfig()
+	}
+	Configure(cfg)
 }
 
 // DefaultConfig returns a console-mode config suitable for local development.
@@ -69,12 +135,33 @@ func DefaultConfig() Config {
 }
 
 // Configure applies cfg and atomically replaces the package-global logger.
+// Any previously opened log files are closed and the new set opened.
 func Configure(cfg Config) {
 	stateMu.Lock()
 	defer stateMu.Unlock()
+	applyFiles(cfg.Files)
 	currentConfig = normalizeConfig(cfg)
 	logger := buildLogger(currentConfig)
 	currentLogger = &logger
+}
+
+// applyFiles closes existing log file handles and opens the new set.
+// Errors opening individual files are written to stderr and that file is skipped.
+func applyFiles(files []LogFile) {
+	filesMu.Lock()
+	defer filesMu.Unlock()
+	for _, f := range openFiles {
+		f.Close()
+	}
+	openFiles = make(map[string]*os.File)
+	for _, lf := range files {
+		f, err := os.OpenFile(lf.Path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "smplog: open log file %q (%s): %v\n", lf.Name, lf.Path, err)
+			continue
+		}
+		openFiles[lf.Name] = f
+	}
 }
 
 // Configured returns a snapshot of the currently active config.

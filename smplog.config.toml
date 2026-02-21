@@ -7,6 +7,7 @@
 #   logs.Configure(cfg)
 #
 # Fields not present in this file are filled with package defaults:
+#   [[files]]   = none
 #   level       = "info"
 #   timestamp   = false
 #   time_format = "2006-01-02T15:04:05Z07:00"  (RFC 3339)
@@ -86,3 +87,25 @@ panic       = 5    # Magenta
 timestamp   = 8    # BrightBlack
 field_name  = 6    # Cyan
 field_value = 7    # White
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# [[files]] — named log file destinations for use with WriteFile.
+#
+# Each entry opens the file for append/create when Configure is called.
+# Files are closed on Close() or when Configure is called again.
+#
+# Usage in code:
+#   logs.WriteFile(logs.At(logs.DebugLevel, "started"), "dev")
+#   logs.WriteFile(logs.Atf(logs.ErrorLevel, "exit code %d", n), "errors")
+#
+# Call logs.Close() on application shutdown to flush and close all files.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# [[files]]
+# name = "dev"
+# path = "logs/dev.log"
+
+# [[files]]
+# name = "errors"
+# path = "logs/errors.log"

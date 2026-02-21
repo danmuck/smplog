@@ -132,3 +132,30 @@ func TestConfigFromFileMissingFile(t *testing.T) {
 		t.Fatal("expected error for missing file, got nil")
 	}
 }
+
+// TestConfigFromFileLogFiles verifies [[files]] entries are parsed into Config.Files.
+func TestConfigFromFileLogFiles(t *testing.T) {
+	path := writeTOML(t, `
+[[files]]
+name = "dev"
+path = "logs/dev.log"
+
+[[files]]
+name = "errors"
+path = "logs/errors.log"
+`)
+
+	cfg, err := ConfigFromFile(path)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(cfg.Files) != 2 {
+		t.Fatalf("expected 2 files, got %d", len(cfg.Files))
+	}
+	if cfg.Files[0].Name != "dev" || cfg.Files[0].Path != "logs/dev.log" {
+		t.Errorf("files[0]: got %+v", cfg.Files[0])
+	}
+	if cfg.Files[1].Name != "errors" || cfg.Files[1].Path != "logs/errors.log" {
+		t.Errorf("files[1]: got %+v", cfg.Files[1])
+	}
+}

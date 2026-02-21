@@ -15,6 +15,15 @@ go mod tidy             # tidy dependencies
 
 No Makefile or custom build scripts exist — the standard Go toolchain is the only build system.
 
+## API stability policy (v1)
+
+Treat this module as **v1**.
+
+- No breaking changes to exported API surface.
+- No breaking changes to default behavior expected by existing integrations.
+- Prefer additive evolution (new APIs/fields/options) over mutation of existing contracts.
+- If a breaking change is truly required, do not land it in-place on v1; require explicit maintainer approval and a major version path (`/v2`).
+
 ## Architecture
 
 `smplog` is a thin zerolog wrapper (`package logs`, imported as `import logs "github.com/danmuck/smplog"`). It provides two output modes toggled via `Config.Bypass`:

@@ -65,6 +65,7 @@ bypass = false
 # [colors] — ANSI 256-color palette index (0–255) for each console token.
 #
 # Omit a field to inherit the color associated with the current log level.
+# Menu helpers (`Menu/Title/Prompt/Data/Divider`) read the same color map.
 # These are the same palette indexes accepted by StyleColor256(n) in code.
 #
 # Common indexes:
@@ -87,6 +88,27 @@ panic       = 5    # Magenta
 timestamp   = 8    # BrightBlack
 field_name  = 6    # Cyan
 field_value = 7    # White
+
+menu        = 14   # BrightCyan
+title       = 15   # BrightWhite (text style can be added in code if needed)
+prompt      = 10   # BrightGreen
+data        = 7    # White
+divider     = 8    # BrightBlack
+
+# ─────────────────────────────────────────────────────────────────────────────
+# [[tui]] — compact menu/TUI helper defaults used by printf/tui_engine.
+#
+# Notes:
+# - This is an array-of-table section so future profiles can be represented.
+# - If multiple [[tui]] blocks are present, the last one wins.
+# - Omit the section to use DefaultTUIConfig() defaults.
+# ─────────────────────────────────────────────────────────────────────────────
+[[tui]]
+menu_selected_prefix   = ">"
+menu_unselected_prefix = " "
+menu_index_width       = 2
+input_cursor           = "_"
+divider_width          = 64
 
 
 # ─────────────────────────────────────────────────────────────────────────────

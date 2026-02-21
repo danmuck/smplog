@@ -20,12 +20,15 @@ type fileConfig struct {
 	NoColor    bool        `toml:"no_color"`
 	Bypass     bool        `toml:"bypass"`
 	Colors     colorConfig `toml:"colors"`
+	TUI        []tuiConfig `toml:"tui"`
 	Files      []LogFile   `toml:"files"`
 }
 
 // colorConfig is the [colors] section of the TOML file.
 // Each field is a 256-color palette index (0–255). Omit a field to inherit
-// the level color. Use StyleColor256(n) in code for the same palette.
+// the level color. Menu/CLI helpers read this same map for `menu`, `title`,
+// `prompt`, `data`, and `divider`. Use StyleColor256(n) in code for the same
+// palette.
 type colorConfig struct {
 	Trace      *int `toml:"trace"`
 	Debug      *int `toml:"debug"`
@@ -38,6 +41,20 @@ type colorConfig struct {
 	Timestamp  *int `toml:"timestamp"`
 	FieldName  *int `toml:"field_name"`
 	FieldValue *int `toml:"field_value"`
+	Menu       *int `toml:"menu"`
+	Title      *int `toml:"title"`
+	Prompt     *int `toml:"prompt"`
+	Data       *int `toml:"data"`
+	Divider    *int `toml:"divider"`
+}
+
+// tuiConfig is the [[tui]] section of the TOML file.
+type tuiConfig struct {
+	MenuSelectedPrefix   string `toml:"menu_selected_prefix"`
+	MenuUnselectedPrefix string `toml:"menu_unselected_prefix"`
+	MenuIndexWidth       int    `toml:"menu_index_width"`
+	InputCursor          string `toml:"input_cursor"`
+	DividerWidth         int    `toml:"divider_width"`
 }
 
 // color256 converts a nullable palette index to an ANSI escape string.
@@ -54,7 +71,7 @@ func color256(p *int) string {
 //
 // Fields absent from the file keep zero values; Configure and normalizeConfig
 // will fill them with package defaults (stdout writer, InfoLevel, RFC3339 time
-// format, DefaultColors).
+// format, DefaultColors, DefaultTUIConfig).
 //
 // The returned Config is ready to pass directly to Configure:
 //
@@ -109,6 +126,27 @@ func ConfigFromFile(path string) (Config, error) {
 			Timestamp:  color256(fc.Colors.Timestamp),
 			FieldName:  color256(fc.Colors.FieldName),
 			FieldValue: color256(fc.Colors.FieldValue),
+			Menu:       color256(fc.Colors.Menu),
+			Title:      color256(fc.Colors.Title),
+			Prompt:     color256(fc.Colors.Prompt),
+			Data:       color256(fc.Colors.Data),
+			Divider:    color256(fc.Colors.Divider),
 		},
+		TUI: parseTUIConfig(fc.TUI),
 	}, nil
+}
+
+func parseTUIConfig(entries []tuiConfig) TUIConfig {
+	if len(entries) == 0 {
+		return TUIConfig{}
+	}
+	// If multiple [[tui]] sections are present, the last one wins.
+	last := entries[len(entries)-1]
+	return TUIConfig{
+		MenuSelectedPrefix:   last.MenuSelectedPrefix,
+		MenuUnselectedPrefix: last.MenuUnselectedPrefix,
+		MenuIndexWidth:       last.MenuIndexWidth,
+		InputCursor:          last.InputCursor,
+		DividerWidth:         last.DividerWidth,
+	}
 }

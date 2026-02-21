@@ -68,6 +68,11 @@ info        = 4
 error       = 1
 field_name  = 6
 field_value = 7
+menu        = 14
+title       = 15
+prompt      = 10
+data        = 252
+divider     = 8
 `)
 
 	cfg, err := ConfigFromFile(path)
@@ -85,6 +90,53 @@ field_value = 7
 	}
 	if cfg.Colors.FieldValue != StyleColor256(7) {
 		t.Errorf("colors.field_value: got %q, want %q", cfg.Colors.FieldValue, StyleColor256(7))
+	}
+	if cfg.Colors.Menu != StyleColor256(14) {
+		t.Errorf("colors.menu: got %q, want %q", cfg.Colors.Menu, StyleColor256(14))
+	}
+	if cfg.Colors.Title != StyleColor256(15) {
+		t.Errorf("colors.title: got %q, want %q", cfg.Colors.Title, StyleColor256(15))
+	}
+	if cfg.Colors.Prompt != StyleColor256(10) {
+		t.Errorf("colors.prompt: got %q, want %q", cfg.Colors.Prompt, StyleColor256(10))
+	}
+	if cfg.Colors.Data != StyleColor256(252) {
+		t.Errorf("colors.data: got %q, want %q", cfg.Colors.Data, StyleColor256(252))
+	}
+	if cfg.Colors.Divider != StyleColor256(8) {
+		t.Errorf("colors.divider: got %q, want %q", cfg.Colors.Divider, StyleColor256(8))
+	}
+}
+
+// TestConfigFromFileTUI verifies [[tui]] entries are parsed into Config.TUI.
+func TestConfigFromFileTUI(t *testing.T) {
+	path := writeTOML(t, `
+[[tui]]
+menu_selected_prefix = ">>"
+menu_unselected_prefix = ".."
+menu_index_width = 3
+input_cursor = "|"
+divider_width = 72
+`)
+
+	cfg, err := ConfigFromFile(path)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.TUI.MenuSelectedPrefix != ">>" {
+		t.Errorf("tui.menu_selected_prefix: got %q, want %q", cfg.TUI.MenuSelectedPrefix, ">>")
+	}
+	if cfg.TUI.MenuUnselectedPrefix != ".." {
+		t.Errorf("tui.menu_unselected_prefix: got %q, want %q", cfg.TUI.MenuUnselectedPrefix, "..")
+	}
+	if cfg.TUI.MenuIndexWidth != 3 {
+		t.Errorf("tui.menu_index_width: got %d, want %d", cfg.TUI.MenuIndexWidth, 3)
+	}
+	if cfg.TUI.InputCursor != "|" {
+		t.Errorf("tui.input_cursor: got %q, want %q", cfg.TUI.InputCursor, "|")
+	}
+	if cfg.TUI.DividerWidth != 72 {
+		t.Errorf("tui.divider_width: got %d, want %d", cfg.TUI.DividerWidth, 72)
 	}
 }
 

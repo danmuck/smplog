@@ -15,12 +15,26 @@ go mod tidy             # tidy dependencies
 
 No Makefile or custom build scripts exist — the standard Go toolchain is the only build system.
 
+## API stability policy (v1)
+
+Treat this module as **v1**.
+
+- No breaking changes to exported API surface.
+- No breaking changes to default behavior expected by existing integrations.
+- Prefer additive evolution (new APIs/fields/options) over mutation of existing contracts.
+- If a breaking change is truly required, do not land it in-place on v1; require explicit maintainer approval and a major version path (`/v2`).
+
 ## Architecture
 
 `smplog` is a thin zerolog wrapper (`package logs`, imported as `import logs "github.com/danmuck/smplog"`). It provides two output modes toggled via `Config.Bypass`:
 
 - **Console mode** (default): colorized, human-readable output via `zerolog.ConsoleWriter`
 - **Bypass mode**: raw structured JSON from zerolog for production log collectors
+
+It also exposes stdout-first helpers that do not require zerolog events:
+
+- `printf.go`: compact formatted output (`Menu`, `Title`, `Prompt`, `Data`, `Divider`)
+- `tui_engine.go`: ANSI terminal control + component helpers (`MoveTo`, `WriteAt`, `MenuItem`, `Field`, `BeginFrame`/`EndFrame`)
 
 ### Key Design Patterns
 
@@ -35,7 +49,9 @@ No Makefile or custom build scripts exist — the standard Go toolchain is the o
 
 **zerolog re-exports in `zerolog_api.go`.** All zerolog types (`Logger`, `Event`, `Context`, etc.) and utility functions are re-exported as package-level aliases so callers never import zerolog directly.
 
-**Legacy compatibility shim.** Integer mode constants (`INACTIVE=0` through `DIAGNOSTICS=5`) and functions (`SetMode`, `Dev`, `Init`, `Print`, `String`, `MsgSuccess`, `MsgFailure`) coexist with the modern zerolog-style API. `modeToLevel()` translates between them. `TRACE` (bool) and `LOGGER_enable_timestamp` are legacy package-level vars that affect `String()` behavior.
+**Stdout-first wrappers.** `printf.go` and `tui_engine.go` compose existing config/color state (`Configured().NoColor`, `Configured().Colors`) so menu/TUI rendering follows the same color policy as console logging while remaining independent of zerolog events.
+
+**TUI config in TOML.** Runtime TUI defaults are stored in `Config.TUI`; file config uses `[[tui]]` with fields such as `menu_selected_prefix`, `menu_index_width`, `input_cursor`, and `divider_width`. If multiple `[[tui]]` blocks are present, last block wins.
 
 **ANSI colors as raw strings.** `ConsoleColors` struct fields hold raw ANSI escape strings. `colorize(color, text, disabled)` in `colors.go` concatenates `color + text + StyleReset`. No external color library.
 
@@ -44,9 +60,13 @@ No Makefile or custom build scripts exist — the standard Go toolchain is the o
 | File | Purpose |
 |---|---|
 | `logger.go` | Core: `Config`, `Configure()`, `buildLogger()`, `applyConsoleFormatting()`, all convenience log functions, legacy shim |
-| `colors.go` | `ConsoleColors`, ANSI palette constants, `colorize()`, `ColorText()`, `StyleColor256()`, `StripANSI()`, `CenterTag()`, `FormatPath()` |
+| `colors.go` | `ConsoleColors`, ANSI palette constants, `colorize()`, `StyleColor256()`, `StripANSI()` |
+| `printf.go` | Stdout wrappers for menu-style colored output (no zerolog event required) |
+| `tui_engine.go` | Compact terminal control/layout/component helpers for component-style TUIs |
 | `zerolog_api.go` | Re-exports all zerolog types and utility functions |
-| `logger_test.go` | White-box tests (same package `logs`); uses `bytes.Buffer` as writer to capture and assert on output |
+| `logger_test.go` | White-box tests for logging behavior |
+| `printf_test.go` | Tests for stdout wrapper color/no-color behavior |
+| `tui_engine_test.go` | Tests for ANSI control, layout helpers, and component wrappers |
 
 ### Test Pattern
 

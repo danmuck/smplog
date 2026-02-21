@@ -31,6 +31,11 @@ Treat this module as **v1**.
 - **Console mode** (default): colorized, human-readable output via `zerolog.ConsoleWriter`
 - **Bypass mode**: raw structured JSON from zerolog for production log collectors
 
+It also exposes stdout-first helpers that do not require zerolog events:
+
+- `printf.go`: compact formatted output (`Menu`, `Title`, `Prompt`, `Data`, `Divider`)
+- `tui_engine.go`: ANSI terminal control + component helpers (`MoveTo`, `WriteAt`, `MenuItem`, `Field`, `BeginFrame`/`EndFrame`)
+
 ### Key Design Patterns
 
 **Package-global singleton logger.** A single `*Logger` (`currentLogger`) and `Config` (`currentConfig`) live as package-level vars, protected by `sync.RWMutex` (`stateMu`). `init()` installs a default logger so the package is usable without explicit setup. All convenience functions (`Info`, `Debug`, `Warn`, etc.) dispatch to this global.
@@ -44,7 +49,7 @@ Treat this module as **v1**.
 
 **zerolog re-exports in `zerolog_api.go`.** All zerolog types (`Logger`, `Event`, `Context`, etc.) and utility functions are re-exported as package-level aliases so callers never import zerolog directly.
 
-**Legacy compatibility shim.** Integer mode constants (`INACTIVE=0` through `DIAGNOSTICS=5`) and functions (`SetMode`, `Dev`, `Init`, `Print`, `String`, `MsgSuccess`, `MsgFailure`) coexist with the modern zerolog-style API. `modeToLevel()` translates between them. `TRACE` (bool) and `LOGGER_enable_timestamp` are legacy package-level vars that affect `String()` behavior.
+**Stdout-first wrappers.** `printf.go` and `tui_engine.go` compose existing config/color state (`Configured().NoColor`, `Configured().Colors`) so menu/TUI rendering follows the same color policy as console logging while remaining independent of zerolog events.
 
 **ANSI colors as raw strings.** `ConsoleColors` struct fields hold raw ANSI escape strings. `colorize(color, text, disabled)` in `colors.go` concatenates `color + text + StyleReset`. No external color library.
 
@@ -53,9 +58,13 @@ Treat this module as **v1**.
 | File | Purpose |
 |---|---|
 | `logger.go` | Core: `Config`, `Configure()`, `buildLogger()`, `applyConsoleFormatting()`, all convenience log functions, legacy shim |
-| `colors.go` | `ConsoleColors`, ANSI palette constants, `colorize()`, `ColorText()`, `StyleColor256()`, `StripANSI()`, `CenterTag()`, `FormatPath()` |
+| `colors.go` | `ConsoleColors`, ANSI palette constants, `colorize()`, `StyleColor256()`, `StripANSI()` |
+| `printf.go` | Stdout wrappers for menu-style colored output (no zerolog event required) |
+| `tui_engine.go` | Compact terminal control/layout/component helpers for component-style TUIs |
 | `zerolog_api.go` | Re-exports all zerolog types and utility functions |
-| `logger_test.go` | White-box tests (same package `logs`); uses `bytes.Buffer` as writer to capture and assert on output |
+| `logger_test.go` | White-box tests for logging behavior |
+| `printf_test.go` | Tests for stdout wrapper color/no-color behavior |
+| `tui_engine_test.go` | Tests for ANSI control, layout helpers, and component wrappers |
 
 ### Test Pattern
 

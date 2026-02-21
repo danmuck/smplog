@@ -3,6 +3,8 @@
 //   - Human-readable, colorized console output in wrapper mode (default).
 //   - Menu/CLI stdout print helpers (Menu, Title, Prompt, Data, Divider)
 //     that reuse the same Config.Colors and NoColor settings.
+//   - Compact TUI engine helpers (MoveTo, WriteAt, MenuItem, BeginFrame, EndFrame)
+//     for component-style terminal rendering without zerolog events.
 //   - A package-global singleton logger configured via Configure and Config.
 //
 // Quick start:

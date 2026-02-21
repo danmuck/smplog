@@ -4,6 +4,7 @@
 
 - structured JSON logs for machine ingestion
 - colored terminal logs for local development
+- lightweight stdout formatting helpers for CLI/menu UIs (`Menu`, `Title`, `Prompt`, `Data`, `Divider`)
 - compatibility helpers for older call sites (`SetMode`, `Logf`, `Print`, etc.)
 
 ## Install
@@ -42,3 +43,19 @@ func main() {
 - `NoColor=true`: disables ANSI colors when console formatting is enabled.
 - `SetMode(...)`: maps legacy mode constants (`INACTIVE`, `ERROR`, `INFO`, `WARN`, `DEBUG`, `DIAGNOSTICS`) to zerolog levels.
 
+## Menu/CLI print helpers
+
+The package also includes stdout wrappers that reuse the same `Config.Colors` and `NoColor` settings, without using `zerolog` events:
+
+```go
+logs.Configure(logs.Config{
+	NoColor: false,
+	Colors:  logs.DefaultColors(),
+})
+
+logs.Title("Ghost Control Plane\n")
+logs.Divider(48)
+logs.Menu("1) Inventory\n")
+logs.Menu("2) Start service\n")
+logs.Prompt("Select option > ")
+```

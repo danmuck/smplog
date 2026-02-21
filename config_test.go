@@ -68,6 +68,11 @@ info        = 4
 error       = 1
 field_name  = 6
 field_value = 7
+menu        = 14
+title       = 15
+prompt      = 10
+data        = 252
+divider     = 8
 `)
 
 	cfg, err := ConfigFromFile(path)
@@ -85,6 +90,21 @@ field_value = 7
 	}
 	if cfg.Colors.FieldValue != StyleColor256(7) {
 		t.Errorf("colors.field_value: got %q, want %q", cfg.Colors.FieldValue, StyleColor256(7))
+	}
+	if cfg.Colors.Menu != StyleColor256(14) {
+		t.Errorf("colors.menu: got %q, want %q", cfg.Colors.Menu, StyleColor256(14))
+	}
+	if cfg.Colors.Title != StyleColor256(15) {
+		t.Errorf("colors.title: got %q, want %q", cfg.Colors.Title, StyleColor256(15))
+	}
+	if cfg.Colors.Prompt != StyleColor256(10) {
+		t.Errorf("colors.prompt: got %q, want %q", cfg.Colors.Prompt, StyleColor256(10))
+	}
+	if cfg.Colors.Data != StyleColor256(252) {
+		t.Errorf("colors.data: got %q, want %q", cfg.Colors.Data, StyleColor256(252))
+	}
+	if cfg.Colors.Divider != StyleColor256(8) {
+		t.Errorf("colors.divider: got %q, want %q", cfg.Colors.Divider, StyleColor256(8))
 	}
 }
 

@@ -39,9 +39,11 @@ go mod tidy
 - `logger.go`: core config/state management, logger construction, top-level log functions, file sink lifecycle
 - `config.go`: TOML decoding (`ConfigFromFile`) into runtime `Config`
 - `colors.go`: ANSI palette/types and formatting helpers
+- `printf.go`: stdout-first formatting wrappers for menu/CLI output (`Menu`, `Title`, `Prompt`, `Data`, `Divider`)
 - `zerolog_api.go`: re-exports of zerolog types/helpers
 - `logger_test.go`: behavior tests for output modes, hooks, and file routing
 - `config_test.go`: TOML parsing tests
+- `printf_test.go`: behavior tests for stdout formatting wrappers and color/no-color behavior
 - `smplog.config.toml`: example/default config file used at init
 - `doc.go`, `README.md`: package-facing docs
 

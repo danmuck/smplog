@@ -25,7 +25,9 @@ type fileConfig struct {
 
 // colorConfig is the [colors] section of the TOML file.
 // Each field is a 256-color palette index (0–255). Omit a field to inherit
-// the level color. Use StyleColor256(n) in code for the same palette.
+// the level color. Menu/CLI helpers read this same map for `menu`, `title`,
+// `prompt`, `data`, and `divider`. Use StyleColor256(n) in code for the same
+// palette.
 type colorConfig struct {
 	Trace      *int `toml:"trace"`
 	Debug      *int `toml:"debug"`
@@ -38,6 +40,11 @@ type colorConfig struct {
 	Timestamp  *int `toml:"timestamp"`
 	FieldName  *int `toml:"field_name"`
 	FieldValue *int `toml:"field_value"`
+	Menu       *int `toml:"menu"`
+	Title      *int `toml:"title"`
+	Prompt     *int `toml:"prompt"`
+	Data       *int `toml:"data"`
+	Divider    *int `toml:"divider"`
 }
 
 // color256 converts a nullable palette index to an ANSI escape string.
@@ -109,6 +116,11 @@ func ConfigFromFile(path string) (Config, error) {
 			Timestamp:  color256(fc.Colors.Timestamp),
 			FieldName:  color256(fc.Colors.FieldName),
 			FieldValue: color256(fc.Colors.FieldValue),
+			Menu:       color256(fc.Colors.Menu),
+			Title:      color256(fc.Colors.Title),
+			Prompt:     color256(fc.Colors.Prompt),
+			Data:       color256(fc.Colors.Data),
+			Divider:    color256(fc.Colors.Divider),
 		},
 	}, nil
 }

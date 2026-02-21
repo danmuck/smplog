@@ -54,34 +54,49 @@ var (
 // e.g. "\x1b[31m" (red) and "\x1b[0m" (reset).
 var ansiPattern = regexp.MustCompile(`\x1b\[[0-9;]*m`)
 
-// ConsoleColors defines ANSI colors applied by the console wrapper.
+// ConsoleColors defines ANSI colors applied by console output:
+// zerolog ConsoleWriter fields plus stdout menu/CLI print helpers.
 type ConsoleColors struct {
-	Trace      string
-	Debug      string
-	Info       string
-	Warn       string
-	Error      string
-	Fatal      string
-	Panic      string
+	Trace string
+	Debug string
+	Info  string
+	Warn  string
+	Error string
+	Fatal string
+	Panic string
+
 	Message    string
 	Timestamp  string
 	FieldName  string
 	FieldValue string
+
+	Menu    string
+	Title   string
+	Prompt  string
+	Data    string
+	Divider string
 }
 
 // DefaultColors returns the default level-based color palette.
 func DefaultColors() ConsoleColors {
 	return ConsoleColors{
-		Trace:      StyleColor256(BrightBlack),
-		Debug:      StyleColor256(Green),
-		Info:       StyleColor256(Blue),
-		Warn:       StyleColor256(Yellow),
-		Error:      StyleColor256(Red),
-		Fatal:      StyleColor256(196),
-		Panic:      StyleColor256(Magenta),
+		Trace: StyleColor256(BrightBlack),
+		Debug: StyleColor256(Green),
+		Info:  StyleColor256(Blue),
+		Warn:  StyleColor256(Yellow),
+		Error: StyleColor256(Red),
+		Fatal: StyleColor256(196),
+		Panic: StyleColor256(Magenta),
+
 		Timestamp:  StyleColor256(BrightBlack),
 		FieldName:  StyleColor256(Cyan),
 		FieldValue: StyleColor256(White),
+
+		Menu:    StyleColor256(BrightCyan),
+		Title:   StyleBold + StyleColor256(BrightWhite),
+		Prompt:  StyleColor256(BrightGreen),
+		Data:    StyleColor256(White),
+		Divider: StyleColor256(BrightBlack),
 	}
 }
 
@@ -110,6 +125,40 @@ func (c ConsoleColors) level(level string) string {
 	default:
 		return ""
 	}
+}
+
+// menu returns the configured menu color, falling back to Info.
+func (c ConsoleColors) menu() string {
+	return firstNonEmpty(c.Menu, c.Info)
+}
+
+// title returns the configured title color, falling back to Info/FieldValue.
+func (c ConsoleColors) title() string {
+	return firstNonEmpty(c.Title, c.Info, c.FieldValue)
+}
+
+// prompt returns the configured prompt color, falling back to Warn/Info.
+func (c ConsoleColors) prompt() string {
+	return firstNonEmpty(c.Prompt, c.Warn, c.Info)
+}
+
+// data returns the configured data color, falling back to FieldValue/Info.
+func (c ConsoleColors) data() string {
+	return firstNonEmpty(c.Data, c.FieldValue, c.Info)
+}
+
+// divider returns the configured divider color, falling back to timestamp/trace.
+func (c ConsoleColors) divider() string {
+	return firstNonEmpty(c.Divider, c.Timestamp, c.Trace)
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, v := range values {
+		if v != "" {
+			return v
+		}
+	}
+	return ""
 }
 
 // colorize wraps text with a style prefix and a trailing reset sequence.

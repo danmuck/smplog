@@ -73,3 +73,14 @@ logs.WriteAt(3, 2, logs.Configured().Colors.menu(), logs.PadRight(24, "1) Invent
 logs.WriteAt(4, 2, logs.Configured().Colors.menu(), logs.PadRight(24, "2) Services"))
 logs.WriteAt(6, 2, logs.Configured().Colors.prompt(), "Select > ")
 ```
+
+TUI defaults can be set in TOML with `[[tui]]`:
+
+```toml
+[[tui]]
+menu_selected_prefix   = ">"
+menu_unselected_prefix = " "
+menu_index_width       = 2
+input_cursor           = "_"
+divider_width          = 64
+```

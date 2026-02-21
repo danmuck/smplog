@@ -51,6 +51,8 @@ It also exposes stdout-first helpers that do not require zerolog events:
 
 **Stdout-first wrappers.** `printf.go` and `tui_engine.go` compose existing config/color state (`Configured().NoColor`, `Configured().Colors`) so menu/TUI rendering follows the same color policy as console logging while remaining independent of zerolog events.
 
+**TUI config in TOML.** Runtime TUI defaults are stored in `Config.TUI`; file config uses `[[tui]]` with fields such as `menu_selected_prefix`, `menu_index_width`, `input_cursor`, and `divider_width`. If multiple `[[tui]]` blocks are present, last block wins.
+
 **ANSI colors as raw strings.** `ConsoleColors` struct fields hold raw ANSI escape strings. `colorize(color, text, disabled)` in `colors.go` concatenates `color + text + StyleReset`. No external color library.
 
 ### Critical Files

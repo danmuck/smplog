@@ -108,6 +108,38 @@ divider     = 8
 	}
 }
 
+// TestConfigFromFileTUI verifies [[tui]] entries are parsed into Config.TUI.
+func TestConfigFromFileTUI(t *testing.T) {
+	path := writeTOML(t, `
+[[tui]]
+menu_selected_prefix = ">>"
+menu_unselected_prefix = ".."
+menu_index_width = 3
+input_cursor = "|"
+divider_width = 72
+`)
+
+	cfg, err := ConfigFromFile(path)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.TUI.MenuSelectedPrefix != ">>" {
+		t.Errorf("tui.menu_selected_prefix: got %q, want %q", cfg.TUI.MenuSelectedPrefix, ">>")
+	}
+	if cfg.TUI.MenuUnselectedPrefix != ".." {
+		t.Errorf("tui.menu_unselected_prefix: got %q, want %q", cfg.TUI.MenuUnselectedPrefix, "..")
+	}
+	if cfg.TUI.MenuIndexWidth != 3 {
+		t.Errorf("tui.menu_index_width: got %d, want %d", cfg.TUI.MenuIndexWidth, 3)
+	}
+	if cfg.TUI.InputCursor != "|" {
+		t.Errorf("tui.input_cursor: got %q, want %q", cfg.TUI.InputCursor, "|")
+	}
+	if cfg.TUI.DividerWidth != 72 {
+		t.Errorf("tui.divider_width: got %d, want %d", cfg.TUI.DividerWidth, 72)
+	}
+}
+
 // TestConfigFromFileOmittedColorIsEmpty verifies omitted color fields produce
 // empty strings so ConsoleColors falls back to the level color.
 func TestConfigFromFileOmittedColorIsEmpty(t *testing.T) {

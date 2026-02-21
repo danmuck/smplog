@@ -74,7 +74,12 @@ go mod tidy
 - `ConfigureConsole` runs after console writer creation.
 - `ConfigureLogger` runs after logger/context construction.
 
-6. File sink contract:
+6. TUI config contract:
+- `Config.TUI` controls defaults for `printf.go`/`tui_engine.go` wrappers.
+- TOML uses `[[tui]]` (array-of-table); when multiple blocks exist, last block wins.
+- Zero-value `Config.TUI` is normalized via `DefaultTUIConfig()` during `Configure`.
+
+7. File sink contract:
 - `WriteFile(fn, name)` is a no-op for unknown names.
 - File sink entries always log JSON with timestamps.
 - `Close()` closes all open file sinks and returns joined errors.

@@ -6,8 +6,6 @@ import (
 	"strings"
 )
 
-const defaultDividerWidth = 64
-
 // Print writes msg to stdout.
 func Print(msg string) (int, error) {
 	return fmt.Fprint(os.Stdout, msg)
@@ -83,6 +81,9 @@ func Divider(width int) (int, error) {
 // DividerRune writes a horizontal divider using r and Config.Colors.Divider.
 // If width <= 0, a default width is used.
 func DividerRune(width int, r rune) (int, error) {
+	if width <= 0 {
+		width = Configured().TUI.DividerWidth
+	}
 	if width <= 0 {
 		width = defaultDividerWidth
 	}

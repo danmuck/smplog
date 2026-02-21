@@ -76,6 +76,13 @@ func TestMenuItemSelectionUsesTitleColor(t *testing.T) {
 			Menu:  StyleColor256(14),
 			Title: StyleColor256(15),
 		},
+		TUI: TUIConfig{
+			MenuSelectedPrefix:   ">>",
+			MenuUnselectedPrefix: "..",
+			MenuIndexWidth:       4,
+			InputCursor:          "|",
+			DividerWidth:         72,
+		},
 	})
 	t.Cleanup(func() { Configure(DefaultConfig()) })
 
@@ -88,7 +95,7 @@ func TestMenuItemSelectionUsesTitleColor(t *testing.T) {
 	if !strings.Contains(out, "\x1b[38;5;15m") {
 		t.Fatalf("expected selected title color in output: %q", out)
 	}
-	if !strings.Contains(out, ">  2) services") {
+	if !strings.Contains(out, ">>    2) services") {
 		t.Fatalf("expected selected item payload in output: %q", out)
 	}
 }
@@ -125,6 +132,9 @@ func TestKeyHintFieldAndInputLineNoColor(t *testing.T) {
 			Prompt: StyleColor256(10),
 			Data:   StyleColor256(7),
 		},
+		TUI: TUIConfig{
+			InputCursor: "|",
+		},
 	})
 	t.Cleanup(func() { Configure(DefaultConfig()) })
 
@@ -149,7 +159,7 @@ func TestKeyHintFieldAndInputLineNoColor(t *testing.T) {
 	if !strings.Contains(out, "mode: diag") {
 		t.Fatalf("expected field payload in output: %q", out)
 	}
-	if !strings.Contains(out, "select> 2_") {
+	if !strings.Contains(out, "select> 2|") {
 		t.Fatalf("expected active input payload in output: %q", out)
 	}
 }

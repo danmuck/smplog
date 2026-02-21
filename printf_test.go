@@ -106,6 +106,9 @@ func TestDividerUsesDefaultWidth(t *testing.T) {
 		Colors: ConsoleColors{
 			Divider: StyleColor256(8),
 		},
+		TUI: TUIConfig{
+			DividerWidth: 72,
+		},
 	})
 	t.Cleanup(func() { Configure(DefaultConfig()) })
 
@@ -116,8 +119,8 @@ func TestDividerUsesDefaultWidth(t *testing.T) {
 	})
 
 	plain := StripANSI(out)
-	if len(plain) != defaultDividerWidth {
-		t.Fatalf("expected divider width %d, got %d (%q)", defaultDividerWidth, len(plain), plain)
+	if len(plain) != 72 {
+		t.Fatalf("expected divider width %d, got %d (%q)", 72, len(plain), plain)
 	}
 	if !strings.HasPrefix(out, "\x1b[38;5;8m") {
 		t.Fatalf("expected divider ANSI color in output: %q", out)

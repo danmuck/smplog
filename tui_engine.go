@@ -8,8 +8,52 @@ import (
 )
 
 const (
-	defaultInputCursor = "_"
+	defaultMenuSelectedPrefix   = ">"
+	defaultMenuUnselectedPrefix = " "
+	defaultMenuIndexWidth       = 2
+	defaultInputCursor          = "_"
+	defaultDividerWidth         = 64
 )
+
+// TUIConfig controls compact menu/TUI output helpers.
+type TUIConfig struct {
+	MenuSelectedPrefix   string
+	MenuUnselectedPrefix string
+	MenuIndexWidth       int
+	InputCursor          string
+	DividerWidth         int
+}
+
+// DefaultTUIConfig returns defaults used by printf/tui_engine helpers.
+func DefaultTUIConfig() TUIConfig {
+	return TUIConfig{
+		MenuSelectedPrefix:   defaultMenuSelectedPrefix,
+		MenuUnselectedPrefix: defaultMenuUnselectedPrefix,
+		MenuIndexWidth:       defaultMenuIndexWidth,
+		InputCursor:          defaultInputCursor,
+		DividerWidth:         defaultDividerWidth,
+	}
+}
+
+func normalizeTUIConfig(cfg TUIConfig) TUIConfig {
+	def := DefaultTUIConfig()
+	if cfg.MenuSelectedPrefix == "" {
+		cfg.MenuSelectedPrefix = def.MenuSelectedPrefix
+	}
+	if cfg.MenuUnselectedPrefix == "" {
+		cfg.MenuUnselectedPrefix = def.MenuUnselectedPrefix
+	}
+	if cfg.MenuIndexWidth <= 0 {
+		cfg.MenuIndexWidth = def.MenuIndexWidth
+	}
+	if cfg.InputCursor == "" {
+		cfg.InputCursor = def.InputCursor
+	}
+	if cfg.DividerWidth <= 0 {
+		cfg.DividerWidth = def.DividerWidth
+	}
+	return cfg
+}
 
 // EnterAltScreen switches the terminal to an alternate screen buffer.
 func EnterAltScreen() (int, error) {
@@ -109,12 +153,12 @@ func Center(width int, s string) string {
 func MenuItem(index int, label string, selected bool) (int, error) {
 	cfg := Configured()
 	color := cfg.Colors.menu()
-	prefix := " "
+	prefix := cfg.TUI.MenuUnselectedPrefix
 	if selected {
 		color = cfg.Colors.title()
-		prefix = ">"
+		prefix = cfg.TUI.MenuSelectedPrefix
 	}
-	return printfColorf(color, "%s %2d) %s", prefix, index, label)
+	return printfColorf(color, "%s %*d) %s", prefix, cfg.TUI.MenuIndexWidth, index, label)
 }
 
 // KeyHint writes a keyboard hint using prompt and data colors.
@@ -157,7 +201,7 @@ func InputLine(prefix, value string, active bool) (int, error) {
 	if !active {
 		return fmt.Fprintf(os.Stdout, "%s%s", prefixText, valueText)
 	}
-	cursor := colorize(cfg.Colors.prompt(), defaultInputCursor, cfg.NoColor)
+	cursor := colorize(cfg.Colors.prompt(), cfg.TUI.InputCursor, cfg.NoColor)
 	return fmt.Fprintf(os.Stdout, "%s%s%s", prefixText, valueText, cursor)
 }
 

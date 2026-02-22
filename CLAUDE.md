@@ -43,6 +43,7 @@ It also exposes stdout-first helpers that do not require zerolog events:
 **Dual-mode via writer substitution.** The only difference between JSON and console modes is the `io.Writer` passed to `zerolog.New()`: bypass uses the raw writer; console wraps it in a `zerolog.ConsoleWriter`. See `buildLogger()` in `logger.go`.
 
 **Escape-hatch hooks in `Config`.** Three optional `func` fields allow customization without exposing zerolog internals:
+
 - `ConfigureZerolog func()` — called before building the logger (e.g. set global zerolog options)
 - `ConfigureConsole func(w *ConsoleWriter)` — called after console writer creation
 - `ConfigureLogger func(l Logger) Logger` — called after logger construction (e.g. inject fields)
@@ -57,17 +58,29 @@ It also exposes stdout-first helpers that do not require zerolog events:
 
 ### Critical Files
 
-| File | Purpose |
-|---|---|
-| `logger.go` | Core: `Config`, `Configure()`, `buildLogger()`, `applyConsoleFormatting()`, all convenience log functions, legacy shim |
-| `colors.go` | `ConsoleColors`, ANSI palette constants, `colorize()`, `StyleColor256()`, `StripANSI()` |
-| `printf.go` | Stdout wrappers for menu-style colored output (no zerolog event required) |
-| `tui_engine.go` | Compact terminal control/layout/component helpers for component-style TUIs |
-| `zerolog_api.go` | Re-exports all zerolog types and utility functions |
-| `logger_test.go` | White-box tests for logging behavior |
-| `printf_test.go` | Tests for stdout wrapper color/no-color behavior |
-| `tui_engine_test.go` | Tests for ANSI control, layout helpers, and component wrappers |
+| File                 | Purpose                                                                                                                |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `logger.go`          | Core: `Config`, `Configure()`, `buildLogger()`, `applyConsoleFormatting()`, all convenience log functions, legacy shim |
+| `colors.go`          | `ConsoleColors`, ANSI palette constants, `colorize()`, `StyleColor256()`, `StripANSI()`                                |
+| `printf.go`          | Stdout wrappers for menu-style colored output (no zerolog event required)                                              |
+| `tui_engine.go`      | Compact terminal control/layout/component helpers for component-style TUIs                                             |
+| `zerolog_api.go`     | Re-exports all zerolog types and utility functions                                                                     |
+| `logger_test.go`     | White-box tests for logging behavior                                                                                   |
+| `printf_test.go`     | Tests for stdout wrapper color/no-color behavior                                                                       |
+| `tui_engine_test.go` | Tests for ANSI control, layout helpers, and component wrappers                                                         |
 
 ### Test Pattern
 
 Tests save global state, configure with a `bytes.Buffer` writer, call a log function, then assert on the captured string. All tests restore global state via `t.Cleanup(func() { Configure(DefaultConfig()) })`.
+
+## Git
+
+- Do not commit changes unless explicitly instructed to do so.
+- Include feature size breakpoints in task lists to ask if I would like to commit the changes, giving me time to look them over before I commit them.
+- By default, I make all commits
+
+## Context Management
+
+- Use `/compact` frequently during long sessions to reduce token surface and keep context focused.
+- Use `/clear` when starting a new logical task or when prior context is no longer relevant.
+- All agents (including subagents) should `/compact` after completing major steps.

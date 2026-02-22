@@ -170,6 +170,13 @@ func colorize(color, text string, disabled bool) string {
 	return fmt.Sprintf("%s%s%s", color, text, StyleReset)
 }
 
+// Colorize wraps text with a style prefix and a trailing reset sequence.
+// It is a no-op when color output is disabled or style/text is empty.
+// This is the exported form of the internal colorize helper.
+func Colorize(color, text string, disabled bool) string {
+	return colorize(color, text, disabled)
+}
+
 // sgr returns a Select Graphic Rendition control sequence for a numeric code.
 // Example: sgr(1) => bold ("\x1b[1m"), sgr(0) => reset ("\x1b[0m").
 func sgr(n int) string {

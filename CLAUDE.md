@@ -33,8 +33,9 @@ Treat this module as **v1**.
 
 It also exposes stdout-first helpers that do not require zerolog events:
 
-- `printf.go`: compact formatted output (`Menu`, `Title`, `Prompt`, `Data`, `Divider`)
-- `tui_engine.go`: ANSI terminal control + component helpers (`MoveTo`, `WriteAt`, `MenuItem`, `Field`, `BeginFrame`/`EndFrame`)
+- `printf.go`: compact formatted output (`Print`, `Printf`, `Println`, `Colorf`)
+
+TUI components (ANSI terminal control, menu/input/divider renderers) have been extracted to the standalone `github.com/danmuck/tui_go` module.
 
 ### Key Design Patterns
 
@@ -50,24 +51,20 @@ It also exposes stdout-first helpers that do not require zerolog events:
 
 **zerolog re-exports in `zerolog_api.go`.** All zerolog types (`Logger`, `Event`, `Context`, etc.) and utility functions are re-exported as package-level aliases so callers never import zerolog directly.
 
-**Stdout-first wrappers.** `printf.go` and `tui_engine.go` compose existing config/color state (`Configured().NoColor`, `Configured().Colors`) so menu/TUI rendering follows the same color policy as console logging while remaining independent of zerolog events.
-
-**TUI config in TOML.** Runtime TUI defaults are stored in `Config.TUI`; file config uses `[[tui]]` with fields such as `menu_selected_prefix`, `menu_index_width`, `input_cursor`, and `divider_width`. If multiple `[[tui]]` blocks are present, last block wins.
+**Stdout-first wrappers.** `printf.go` composes existing config/color state (`Configured().NoColor`, `Configured().Colors`) so output follows the same color policy as console logging while remaining independent of zerolog events.
 
 **ANSI colors as raw strings.** `ConsoleColors` struct fields hold raw ANSI escape strings. `colorize(color, text, disabled)` in `colors.go` concatenates `color + text + StyleReset`. No external color library.
 
 ### Critical Files
 
-| File                 | Purpose                                                                                                                |
-| -------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `logger.go`          | Core: `Config`, `Configure()`, `buildLogger()`, `applyConsoleFormatting()`, all convenience log functions, legacy shim |
-| `colors.go`          | `ConsoleColors`, ANSI palette constants, `colorize()`, `StyleColor256()`, `StripANSI()`                                |
-| `printf.go`          | Stdout wrappers for menu-style colored output (no zerolog event required)                                              |
-| `tui_engine.go`      | Compact terminal control/layout/component helpers for component-style TUIs                                             |
-| `zerolog_api.go`     | Re-exports all zerolog types and utility functions                                                                     |
-| `logger_test.go`     | White-box tests for logging behavior                                                                                   |
-| `printf_test.go`     | Tests for stdout wrapper color/no-color behavior                                                                       |
-| `tui_engine_test.go` | Tests for ANSI control, layout helpers, and component wrappers                                                         |
+| File             | Purpose                                                                                                                |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `logger.go`      | Core: `Config`, `Configure()`, `buildLogger()`, `applyConsoleFormatting()`, all convenience log functions, legacy shim |
+| `colors.go`      | `ConsoleColors`, ANSI palette constants, `colorize()`, `Colorize()`, `StyleColor256()`, `StripANSI()`                  |
+| `printf.go`      | Stdout wrappers for colored output (no zerolog event required)                                                         |
+| `zerolog_api.go` | Re-exports all zerolog types and utility functions                                                                     |
+| `logger_test.go` | White-box tests for logging behavior                                                                                   |
+| `printf_test.go` | Tests for stdout wrapper color/no-color behavior                                                                       |
 
 ### Test Pattern
 

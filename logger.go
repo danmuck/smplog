@@ -34,8 +34,6 @@ type Config struct {
 	Bypass bool
 	// Colors controls per-level ANSI colors in console mode.
 	Colors ConsoleColors
-	// TUI controls compact menu/TUI rendering helpers in printf/tui_engine.
-	TUI TUIConfig
 	// Files lists named log file destinations available to WriteFile.
 	// Each entry is opened for append/create when Configure is called.
 	Files []LogFile
@@ -133,7 +131,6 @@ func DefaultConfig() Config {
 		NoColor:    false,
 		Bypass:     false,
 		Colors:     DefaultColors(),
-		TUI:        DefaultTUIConfig(),
 	}
 }
 
@@ -230,7 +227,6 @@ func normalizeConfig(cfg Config) Config {
 	if cfg.Colors == (ConsoleColors{}) {
 		cfg.Colors = DefaultColors()
 	}
-	cfg.TUI = normalizeTUIConfig(cfg.TUI)
 	return cfg
 }
 

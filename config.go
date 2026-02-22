@@ -20,7 +20,6 @@ type fileConfig struct {
 	NoColor    bool        `toml:"no_color"`
 	Bypass     bool        `toml:"bypass"`
 	Colors     colorConfig `toml:"colors"`
-	TUI        []tuiConfig `toml:"tui"`
 	Files      []LogFile   `toml:"files"`
 }
 
@@ -48,17 +47,6 @@ type colorConfig struct {
 	Divider    *int `toml:"divider"`
 }
 
-// tuiConfig is the [[tui]] section of the TOML file.
-type tuiConfig struct {
-	MenuSelectedPrefix   string `toml:"menu_selected_prefix"`
-	MenuUnselectedPrefix string `toml:"menu_unselected_prefix"`
-	MenuIndexWidth       int    `toml:"menu_index_width"`
-	InputCursor          string `toml:"input_cursor"`
-	DividerWidth         int    `toml:"divider_width"`
-	MaxWidth             int    `toml:"max_width"`
-	Centered             bool   `toml:"centered"`
-}
-
 // color256 converts a nullable palette index to an ANSI escape string.
 // A nil pointer means the field was absent in the file; return empty string
 // so ConsoleColors falls back to the level color.
@@ -73,7 +61,7 @@ func color256(p *int) string {
 //
 // Fields absent from the file keep zero values; Configure and normalizeConfig
 // will fill them with package defaults (stdout writer, InfoLevel, RFC3339 time
-// format, DefaultColors, DefaultTUIConfig).
+// format, DefaultColors).
 //
 // The returned Config is ready to pass directly to Configure:
 //
@@ -134,23 +122,5 @@ func ConfigFromFile(path string) (Config, error) {
 			Data:       color256(fc.Colors.Data),
 			Divider:    color256(fc.Colors.Divider),
 		},
-		TUI: parseTUIConfig(fc.TUI),
 	}, nil
-}
-
-func parseTUIConfig(entries []tuiConfig) TUIConfig {
-	if len(entries) == 0 {
-		return TUIConfig{}
-	}
-	// If multiple [[tui]] sections are present, the last one wins.
-	last := entries[len(entries)-1]
-	return TUIConfig{
-		MenuSelectedPrefix:   last.MenuSelectedPrefix,
-		MenuUnselectedPrefix: last.MenuUnselectedPrefix,
-		MenuIndexWidth:       last.MenuIndexWidth,
-		InputCursor:          last.InputCursor,
-		DividerWidth:         last.DividerWidth,
-		MaxWidth:             last.MaxWidth,
-		Centered:             last.Centered,
-	}
 }

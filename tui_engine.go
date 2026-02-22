@@ -22,6 +22,9 @@ type TUIConfig struct {
 	MenuIndexWidth       int
 	InputCursor          string
 	DividerWidth         int
+	// Additive: component layout policy
+	MaxWidth int  // 0 = unconstrained; clamps all TUI component content
+	Centered bool // when true and MaxWidth > 0, center content within MaxWidth
 }
 
 // DefaultTUIConfig returns defaults used by printf/tui_engine helpers.
@@ -211,8 +214,8 @@ func DividerRune(width int, r rune) (int, error) {
 	if r == 0 {
 		r = '-'
 	}
-	line := "   " + strings.Repeat(string(r), width) + "   "
-	return printfColorf(Configured().Colors.divider(), "\n%s\n", line)
+	line := "  " + strings.Repeat(string(r), width) + "  "
+	return printfColorf(Configured().Colors.divider(), "\n\n%s\n\n", line)
 }
 
 // MenuItem writes a compact menu entry.

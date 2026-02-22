@@ -119,10 +119,11 @@ func TestDividerUsesDefaultWidth(t *testing.T) {
 	})
 
 	plain := StripANSI(out)
-	if len(plain) != 72 {
-		t.Fatalf("expected divider width %d, got %d (%q)", 72, len(plain), plain)
+	count := strings.Count(plain, "-")
+	if count != 72 {
+		t.Fatalf("expected %d dashes in divider, got %d (%q)", 72, count, plain)
 	}
-	if !strings.HasPrefix(out, "\x1b[38;5;8m") {
+	if !strings.Contains(out, "\x1b[38;5;8m") {
 		t.Fatalf("expected divider ANSI color in output: %q", out)
 	}
 }

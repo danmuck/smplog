@@ -185,6 +185,26 @@ func TestConfigFromFileMissingFile(t *testing.T) {
 	}
 }
 
+// TestConfigFromFileTUIMaxWidthAndCentered verifies max_width and centered are parsed from [[tui]].
+func TestConfigFromFileTUIMaxWidthAndCentered(t *testing.T) {
+	path := writeTOML(t, `
+[[tui]]
+max_width = 80
+centered  = true
+`)
+
+	cfg, err := ConfigFromFile(path)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.TUI.MaxWidth != 80 {
+		t.Errorf("tui.max_width: got %d, want %d", cfg.TUI.MaxWidth, 80)
+	}
+	if !cfg.TUI.Centered {
+		t.Error("tui.centered: expected true")
+	}
+}
+
 // TestConfigFromFileLogFiles verifies [[files]] entries are parsed into Config.Files.
 func TestConfigFromFileLogFiles(t *testing.T) {
 	path := writeTOML(t, `

@@ -55,6 +55,8 @@ type tuiConfig struct {
 	MenuIndexWidth       int    `toml:"menu_index_width"`
 	InputCursor          string `toml:"input_cursor"`
 	DividerWidth         int    `toml:"divider_width"`
+	MaxWidth             int    `toml:"max_width"`
+	Centered             bool   `toml:"centered"`
 }
 
 // color256 converts a nullable palette index to an ANSI escape string.
@@ -148,5 +150,7 @@ func parseTUIConfig(entries []tuiConfig) TUIConfig {
 		MenuIndexWidth:       last.MenuIndexWidth,
 		InputCursor:          last.InputCursor,
 		DividerWidth:         last.DividerWidth,
+		MaxWidth:             last.MaxWidth,
+		Centered:             last.Centered,
 	}
 }

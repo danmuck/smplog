@@ -57,6 +57,62 @@ func TestColorfAppliesANSIColor(t *testing.T) {
 	}
 }
 
+func TestFprint(t *testing.T) {
+	var buf bytes.Buffer
+	Fprint(&buf, "hello")
+	if buf.String() != "hello" {
+		t.Fatalf("got %q, want %q", buf.String(), "hello")
+	}
+}
+
+func TestFprintf(t *testing.T) {
+	var buf bytes.Buffer
+	Fprintf(&buf, "count: %d", 42)
+	if buf.String() != "count: 42" {
+		t.Fatalf("got %q, want %q", buf.String(), "count: 42")
+	}
+}
+
+func TestFprintln(t *testing.T) {
+	var buf bytes.Buffer
+	Fprintln(&buf, "line")
+	if buf.String() != "line\n" {
+		t.Fatalf("got %q, want %q", buf.String(), "line\n")
+	}
+}
+
+func TestFcolorfAppliesColor(t *testing.T) {
+	Configure(Config{NoColor: false})
+	t.Cleanup(func() { Configure(DefaultConfig()) })
+
+	var buf bytes.Buffer
+	Fcolorf(&buf, StyleColor256(14), "hello %s", "world")
+
+	out := buf.String()
+	if !strings.Contains(out, "\x1b[38;5;14m") {
+		t.Fatalf("expected ANSI color in output: %q", out)
+	}
+	if !strings.Contains(out, "hello world") {
+		t.Fatalf("expected message in output: %q", out)
+	}
+}
+
+func TestFcolorfRespectsNoColor(t *testing.T) {
+	Configure(Config{NoColor: true})
+	t.Cleanup(func() { Configure(DefaultConfig()) })
+
+	var buf bytes.Buffer
+	Fcolorf(&buf, StyleColor256(10), "plain %s", "text")
+
+	out := buf.String()
+	if strings.Contains(out, "\x1b[") {
+		t.Fatalf("expected no ANSI with NoColor=true: %q", out)
+	}
+	if out != "plain text" {
+		t.Fatalf("got %q, want %q", out, "plain text")
+	}
+}
+
 func TestColorfRespectsNoColor(t *testing.T) {
 	Configure(Config{
 		NoColor: true,
